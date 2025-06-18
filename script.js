@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- Configuration ---
     const config = {
-        googleScriptUrl: 'https://script.google.com/macros/s/AKfycbxrqrvUJYzO_92JKwq8hlg9MHXTYdMb7xnKSn_09K1Jw2LyOe_RFBxRvDWFLhREEyIs/exec', // Replace with your Web app URL
+        googleScriptUrl: 'https://script.google.com/macros/s/AKfycbxrqrvUJYzO_92JKwq8hlg9MHXTYdMb7xnKSn_09K1Jw2LyOe_RFBxRvDWFLhREEyIs/exec'
     };
 
     // --- Element References ---
@@ -31,35 +31,43 @@ document.addEventListener('DOMContentLoaded', () => {
         const form = e.target;
         const formData = new FormData(form);
         const data = Object.fromEntries(formData.entries());
-
-        // Construct the query string for both POST and GET requests.
-        // Note: Sending sensitive data like passwords in GET requests is insecure and should be avoided in production.
         const queryString = new URLSearchParams({ action, ...data }).toString();
 
         try {
-            // The initial POST request with 'no-cors' mode.
-            // This is often used as a workaround when the server doesn't support CORS preflight requests.
-            // However, it means we can't read the response from this request.
-            await fetch(config.googleScriptUrl, {
+            // Try POST request first
+            const response = await fetch(config.googleScriptUrl, {
                 method: 'POST',
-                mode: 'no-cors', // This prevents reading the response, necessitating the second GET request.
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: queryString
             });
 
-            // The second GET request to fetch the actual response.
-            // This is inefficient. Ideally, the backend should handle the POST request
-            // with proper CORS headers and return the response directly.
-            const response = await fetch(`${config.googleScriptUrl}?${queryString}`);
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+            if (response.ok) {
+                const result = await response.json();
+                showMessage(result.message, result.status);
+                if (result.status === 'success') {
+                    form.reset();
+                    if (action === 'signin') {
+                        alert(`Welcome, ${result.name}!`);
+                    }
+                }
+                return;
             }
 
-            const result = await response.json();
+            // Fallback to no-cors POST + GET if POST fails due to CORS
+            await fetch(config.googleScriptUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: queryString
+            });
 
+            const getResponse = await fetch(`${config.googleScriptUrl}?${queryString}`);
+            if (!getResponse.ok) {
+                throw new Error(`HTTP error! status: ${getResponse.status}`);
+            }
+
+            const result = await getResponse.json();
             showMessage(result.message, result.status);
-
             if (result.status === 'success') {
                 form.reset();
                 if (action === 'signin') {
