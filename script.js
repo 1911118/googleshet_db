@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- Configuration ---
     const config = {
-        googleScriptUrl: 'https://script.google.com/macros/s/AKfycbxrqrvUJYzO_92JKwq8hlg9MHXTYdMb7xnKSn_09K1Jw2LyOe_RFBxRvDWFLhREEyIs/exec'
+        googleScriptUrl: 'https://script.google.com/macros/s/AKfycbwjMFkqZvR_UC2NKcm1kSKFKwdY0Nand7zlIqh75-5dxDe8i4e0jOV-k7Ou_i1NAaa4/exec'
     };
 
     // --- Element References ---
@@ -34,40 +34,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const queryString = new URLSearchParams({ action, ...data }).toString();
 
         try {
-            // Try POST request first
             const response = await fetch(config.googleScriptUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: queryString
             });
 
-            if (response.ok) {
-                const result = await response.json();
-                showMessage(result.message, result.status);
-                if (result.status === 'success') {
-                    form.reset();
-                    if (action === 'signin') {
-                        alert(`Welcome, ${result.name}!`);
-                    }
-                }
-                return;
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            // Fallback to no-cors POST + GET if POST fails due to CORS
-            await fetch(config.googleScriptUrl, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: queryString
-            });
-
-            const getResponse = await fetch(`${config.googleScriptUrl}?${queryString}`);
-            if (!getResponse.ok) {
-                throw new Error(`HTTP error! status: ${getResponse.status}`);
-            }
-
-            const result = await getResponse.json();
+            const result = await response.json();
             showMessage(result.message, result.status);
+
             if (result.status === 'success') {
                 form.reset();
                 if (action === 'signin') {
